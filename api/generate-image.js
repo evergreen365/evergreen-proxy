@@ -1,13 +1,4 @@
-async function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = Buffer.alloc(0);
-    req.on('data', chunk => { data = Buffer.concat([data, chunk]); });
-    req.on('end', () => { try { resolve(JSON.parse(data.toString())); } catch(e) { reject(e); } });
-    req.on('error', reject);
-  });
-}
-
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: { sizeLimit: '5mb' } } };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { base64, mime } = await readBody(req);
+    const { base64, mime } = req.body;
     const buffer = Buffer.from(base64, 'base64');
     const file = new File([buffer], 'before.jpg', { type: 'image/jpeg' });
 
@@ -36,7 +27,7 @@ Result: identical room with only the loose garbage removed.`);
       body: fd,
     });
     const data = await response.json();
-    console.log('[generate-image] status:', response.status, 'response:', JSON.stringify(data).slice(0, 300));
+    console.log('[generate-image] status:', response.status, JSON.stringify(data).slice(0, 200));
     return res.status(200).json(data);
   } catch(e) {
     console.error('[generate-image error]', e.message);
