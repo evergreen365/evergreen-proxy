@@ -1,10 +1,13 @@
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
+async function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = Buffer.alloc(0);
+    req.on('data', chunk => { data = Buffer.concat([data, chunk]); });
+    req.on('end', () => { try { resolve(JSON.parse(data.toString())); } catch(e) { reject(e); } });
+    req.on('error', reject);
+  });
+}
+
+export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,7 +16,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { base64, mime } = req.body;
+    const { base64, mime } = await readBody(req);
     const buffer = Buffer.from(base64, 'base64');
     const blob = new Blob([buffer], { type: mime });
 
