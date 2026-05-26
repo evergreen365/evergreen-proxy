@@ -6,24 +6,35 @@ export default async function handler(req, res) {
 
   try {
     const { base64 } = req.body;
-    const buffer = Buffer.from(base64, 'base64');
-    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    const imageBuffer = Buffer.from(base64, 'base64');
+    const boundary = '----Boundary' + Date.now();
+    const CRLF = '\r\n';
 
-    const fd = new FormData();
-    fd.append('model', 'gpt-image-1');
-    fd.append('image[]', blob, 'image.jpg');
-    fd.append('prompt', 'Remove all trash, garbage bags, cardboard boxes from the floor. Keep walls, furniture, and room structure identical. Result: same room, clean floor only.');
-    fd.append('n', '1');
-    fd.append('size', '1024x1024');
+    const prompt = 'Remove all trash, garbage bags, cardboard boxes from the floor. Keep walls, furniture, and room structure identical.';
+
+    const parts = [
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="model"${CRLF}${CRLF}gpt-image-1${CRLF}`),
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="prompt"${CRLF}${CRLF}${prompt}${CRLF}`),
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="n"${CRLF}${CRLF}1${CRLF}`),
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="size"${CRLF}${CRLF}1024x1024${CRLF}`),
+      Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="image[]"; filename="image.jpg"${CRLF}Content-Type: image/jpeg${CRLF}${CRLF}`),
+      imageBuffer,
+      Buffer.from(`${CRLF}--${boundary}--${CRLF}`),
+    ];
+
+    const body = Buffer.concat(parts);
 
     const response = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_KEY}` },
-      body: fd,
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_KEY}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
     });
 
     const text = await response.text();
-    console.log('[img] status:', response.status, 'body:', text.slice(0, 300));
+    console.log('[img] status:', response.status, text.slice(0, 300));
 
     try {
       return res.status(200).json(JSON.parse(text));
