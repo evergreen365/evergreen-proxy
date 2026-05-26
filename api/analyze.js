@@ -1,5 +1,3 @@
-export const config = { api: { bodyParser: { sizeLimit: '5mb' } } };
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -29,7 +27,6 @@ Rules: contamination_level 1-4, trash_amount low/medium/high, confidence high/me
       }),
     });
     const data = await response.json();
-    console.log('[analyze] status:', response.status);
     return res.status(200).json(data);
   } catch(e) {
     console.error('[analyze error]', e.message);
