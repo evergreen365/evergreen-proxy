@@ -1,13 +1,4 @@
-async function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = Buffer.alloc(0);
-    req.on('data', chunk => { data = Buffer.concat([data, chunk]); });
-    req.on('end', () => { try { resolve(JSON.parse(data.toString())); } catch(e) { reject(e); } });
-    req.on('error', reject);
-  });
-}
-
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: { sizeLimit: '5mb' } } };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { base64, mime } = await readBody(req);
+    const { base64, mime } = req.body;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -38,9 +29,10 @@ Rules: contamination_level 1-4, trash_amount low/medium/high, confidence high/me
       }),
     });
     const data = await response.json();
+    console.log('[analyze] status:', response.status);
     return res.status(200).json(data);
   } catch(e) {
-    console.error('[analyze error]', e);
+    console.error('[analyze error]', e.message);
     return res.status(500).json({ error: e.message });
   }
 }
